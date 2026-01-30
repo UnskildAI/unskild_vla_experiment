@@ -10,7 +10,7 @@ model:
     language_frozen: false
 data:
   dataset_name: lerobot_vlm
-  batch_size: 16
+  batch_size: 2
   num_workers: 0
   shuffle: true
   drop_last: true
@@ -22,7 +22,7 @@ data:
     single_task: null  # or e.g. "Pick the cube" to override task text
 training:
   max_steps: 5000
-  gradient_accumulation_steps: 1
+  gradient_accumulation_steps: 8
   mixed_precision: fp16
   seed: 42
   log_interval: 20

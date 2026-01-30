@@ -125,6 +125,7 @@ class LeRobotVLMDataset(BaseDataset):
                     padding="max_length",
                     max_length=self.max_length,
                     truncation=True,
+                    do_rescale=False, # Already in [0, 1]
                 )
                 
                 input_ids = model_inputs["input_ids"].squeeze(0)
