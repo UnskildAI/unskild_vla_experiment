@@ -6,12 +6,12 @@ seed: 42
 model:
   name: paligemma
   extra:
-    vision_frozen: false
+    vision_frozen: true
     language_frozen: false
     gradient_checkpointing: true
 data:
   dataset_name: lerobot_vlm
-  batch_size: 2
+  batch_size: 1
   num_workers: 0
   shuffle: true
   drop_last: true
@@ -23,7 +23,7 @@ data:
     single_task: null  # or e.g. "Pick the cube" to override task text
 training:
   max_steps: 5000
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 16
   mixed_precision: bf16
   seed: 42
   log_interval: 20
