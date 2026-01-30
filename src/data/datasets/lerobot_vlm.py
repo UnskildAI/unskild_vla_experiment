@@ -114,7 +114,9 @@ class LeRobotVLMDataset(BaseDataset):
                 # PaliGemma processor usually prepends <image> * 256
                 
                 # Handle image normalization/scaling
-                # image is float32 tensor
+                # image is float32 tensor in [0, 1] (mostly)
+                # Clamp to ensure strict [0, 1] to avoid processor errors during PIL conversion
+                image = torch.clamp(image, 0.0, 1.0)
                 
                 model_inputs = self._tokenizer(
                     text=task_text,
