@@ -58,6 +58,12 @@ class BaseTrainer(ABC):
         """Explicit training loop: gradient accumulation, mixed precision, no magic helpers."""
         callbacks = callbacks or []
         self._setup_mixed_precision()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Using device: {self.device}")
+        
+        # Move model to device
+        self.model.to(self.device)
+        
         accum_steps = self.config.gradient_accumulation_steps
         max_grad_norm = getattr(self.config, "max_grad_norm", None)
         self.model.train()
@@ -71,6 +77,10 @@ class BaseTrainer(ABC):
                 except StopIteration:
                     iterator = iter(train_loader)
                     batch = next(iterator)
+                    
+                # Move batch to device
+                batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                
                 with torch.amp.autocast("cuda", enabled=self.config.mixed_precision != "no"):
                     step_metrics = self.train_step(batch)
                 loss = step_metrics.get("loss")
