@@ -12,6 +12,8 @@ from src.training.losses.vlm import VLMLoss, VLMLossConfig
 from src.training.optimizers import build_optimizer, OptimizerConfig
 from src.core.typing import BatchDict
 
+from transformers.optimization import Adafactor
+
 
 class VLMTrainerConfig(BaseTrainerConfig):
     learning_rate: float = Field(1e-5, gt=0)
@@ -19,14 +21,21 @@ class VLMTrainerConfig(BaseTrainerConfig):
     max_grad_norm: float | None = None
     extra: dict[str, Any] = Field(default_factory=dict)
 
-
 class VLMTrainer(BaseTrainer):
     def __init__(self, model: torch.nn.Module, config: VLMTrainerConfig, loss_config: VLMLossConfig | None = None, **kwargs: Any) -> None:
         super().__init__(config)
         self._model = model
         self._loss_fn = VLMLoss(loss_config or VLMLossConfig())
-        opt_config = OptimizerConfig(name="adamw", lr=config.learning_rate, weight_decay=config.weight_decay)
-        self._optimizer = build_optimizer(model.parameters(), opt_config)
+        
+        # Use Adafactor for memory efficiency (critical for 3B+ models on 24GB GPUs)
+        # Disable scaling/relative_step for fine-tuning with explicit LR
+        self._optimizer = Adafactor(
+            model.parameters(),
+            lr=config.learning_rate,
+            weight_decay=config.weight_decay,
+            scale_parameter=False,
+            relative_step=False,
+        )
 
     @property
     def model(self) -> torch.nn.Module:
