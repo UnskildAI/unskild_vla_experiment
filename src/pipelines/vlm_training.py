@@ -32,6 +32,11 @@ class VLMTrainingPipeline(BasePipeline):
         if self.experiment_config is None:
             raise ValueError("Set experiment_config or pass ExperimentConfig to __init__")
         cfg = self.experiment_config
+        model = ModelRegistry.build(cfg.model.name, cfg.model.extra)
+        
+        # Extract processor/tokenizer if available to pass to dataset
+        tokenizer = getattr(model, "processor", getattr(model, "tokenizer", None))
+
         train_loader = build_dataloader(
             cfg.data.dataset_name,
             cfg.data.extra,
@@ -39,8 +44,8 @@ class VLMTrainingPipeline(BasePipeline):
             num_workers=cfg.data.num_workers,
             shuffle=cfg.data.shuffle,
             drop_last=cfg.data.drop_last,
+            tokenizer=tokenizer,
         )
-        model = ModelRegistry.build(cfg.model.name, cfg.model.extra)
         trainer_config = VLMTrainerConfig(
             max_steps=cfg.training.max_steps,
             gradient_accumulation_steps=cfg.training.gradient_accumulation_steps,

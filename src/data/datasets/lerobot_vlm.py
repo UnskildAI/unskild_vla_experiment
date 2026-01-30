@@ -93,7 +93,76 @@ class LeRobotVLMDataset(BaseDataset):
             if image.shape[0] != 3:
                 image = image.expand(3, -1, -1)
         task_text = self._get_task_text(index)
+        
+        # Use processor if available (e.g. PaliGemmaProcessor)
         if self._tokenizer is not None:
+            # Check if it behaves like a processor (accepts images)
+            try:
+                # Prepare inputs using the processor
+                # image is (3, H, W) tensor, processor expects (H, W, 3) numpy/tensor or PIL usually
+                # But HF processors are flexible. Let's try passing the tensor.
+                # Usually better to pass list of images.
+                
+                # LeRobot image: (3, H, W). HF Processor usually wants (C, H, W) or (H, W, C)?
+                # Standard HF image processor usually takes (C, H, W) tensors or PIL.
+                # Let's assume (3, H, W) is fine or converting to PIL is safer.
+                # To be safe and standard:
+                
+                # IMPORTANT: PaliGemma requires "image" tokens in the text prompt? 
+                # Actually usage: processor(images=img, text=prompt)
+                # It prepends tokens automatically if not present?
+                # PaliGemma processor usually prepends <image> * 256
+                
+                # Handle image normalization/scaling
+                # image is float32 tensor
+                
+                model_inputs = self._tokenizer(
+                    text=task_text,
+                    images=image,
+                    return_tensors="pt",
+                    padding="max_length",
+                    max_length=self.max_length,
+                    truncation=True,
+                )
+                
+                input_ids = model_inputs["input_ids"].squeeze(0)
+                attention_mask = model_inputs["attention_mask"].squeeze(0)
+                pixel_values = model_inputs["pixel_values"].squeeze(0)
+                
+                # Setup labels: clone input_ids and mask padding
+                labels = input_ids.clone()
+                if self._tokenizer.tokenizer.pad_token_id is not None:
+                     labels[labels == self._tokenizer.tokenizer.pad_token_id] = -100
+                     
+                # Also mask the image tokens in labels? 
+                # PaliGemma training usually trains on all tokens or just text?
+                # Standard fine-tuning often masks the image placeholder tokens.
+                # <image> token id?
+                # For now let's just mask padding.
+                
+                return {
+                    "pixel_values": pixel_values,
+                    "input_ids": input_ids,
+                    "attention_mask": attention_mask,
+                    "labels": labels,
+                }
+            except Exception as e:
+                # Fallback or re-raise if strictly expecting processor
+                logger.warning(f"Processor failed: {e}. Falling back to manual.")
+                pass
+
+        # Fallback (Manual)
+        if not isinstance(image, torch.Tensor):
+            image = torch.tensor(image, dtype=torch.float32)
+        if image.dim() == 4:
+            image = image[0]
+        if image.shape[0] != 3 or image.shape[1] != self.image_size or image.shape[2] != self.image_size:
+            from torchvision.transforms import functional as F
+            image = F.resize(image.unsqueeze(0), [self.image_size, self.image_size]).squeeze(0)
+            if image.shape[0] != 3:
+                image = image.expand(3, -1, -1)
+                
+        if self._tokenizer is not None and hasattr(self._tokenizer, "encode"): # Just a tokenizer
             tok = self._tokenizer(
                 task_text,
                 max_length=self.max_length,
@@ -105,12 +174,14 @@ class LeRobotVLMDataset(BaseDataset):
             attention_mask = tok["attention_mask"].squeeze(0)
             labels = input_ids.clone()
         else:
+             # ASCII fallback
             input_ids = torch.zeros(self.max_length, dtype=torch.long)
             attention_mask = torch.ones(self.max_length, dtype=torch.long)
             if task_text:
                 for i, c in enumerate(task_text[: self.max_length - 1]):
                     input_ids[i] = ord(c) % 32000
             labels = input_ids.clone()
+            
         return {
             "pixel_values": image.float(),
             "input_ids": input_ids,
