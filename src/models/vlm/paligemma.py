@@ -35,10 +35,10 @@ class PaliGemmaVLM(BaseVLM):
         
         # Load real model from Hugging Face
         # Note: This requires authentication for gated models (paligemma isn't gated usually, but check)
-        # Using float32 for CPU compatibility as default, but ideally float16/bfloat16 for GPU
+        # Using bfloat16 for training stability and memory savings (standard for PaliGemma)
         self.hf_model = PaliGemmaForConditionalGeneration.from_pretrained(
             self.model_name_or_path,
-            torch_dtype=torch.float32, 
+            torch_dtype=torch.bfloat16, 
             low_cpu_mem_usage=True
         )
         self.processor = PaliGemmaProcessor.from_pretrained(self.model_name_or_path)

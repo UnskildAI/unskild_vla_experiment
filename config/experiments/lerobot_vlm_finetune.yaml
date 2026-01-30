@@ -24,7 +24,7 @@ data:
 training:
   max_steps: 5000
   gradient_accumulation_steps: 8
-  mixed_precision: fp16
+  mixed_precision: bf16
   seed: 42
   log_interval: 20
   eval_interval: 500

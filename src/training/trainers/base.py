@@ -86,7 +86,7 @@ class BaseTrainer(ABC):
                 # Move batch to device
                 batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
                 
-                with torch.amp.autocast("cuda", enabled=self.config.mixed_precision != "no"):
+                with torch.amp.autocast("cuda", enabled=self.config.mixed_precision != "no", dtype=self._autocast_dtype):
                     step_metrics = self.train_step(batch)
                 loss = step_metrics.get("loss")
                 if loss is not None and isinstance(loss, torch.Tensor):
@@ -123,9 +123,15 @@ class BaseTrainer(ABC):
         self.logger.info("Training finished. total_steps=%d", self.global_step)
 
     def _setup_mixed_precision(self) -> None:
-        if self.config.mixed_precision == "fp16":
+        self._autocast_dtype = torch.float16
+        if self.config.mixed_precision == "bf16":
+            self._autocast_dtype = torch.bfloat16
+            self._scaler = None # Scaler not essential for bf16
+        elif self.config.mixed_precision == "fp16":
+            self._autocast_dtype = torch.float16
             self._scaler = torch.amp.GradScaler("cuda")
         else:
+            self._autocast_dtype = torch.float32 # fallback or no casting
             self._scaler = None
 
     def evaluate(self, eval_loader: DataLoader[BatchDict]) -> dict[str, float]:
