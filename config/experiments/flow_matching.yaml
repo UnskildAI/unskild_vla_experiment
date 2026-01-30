@@ -1,0 +1,20 @@
+experiment_name: flow_matching
+output_dir: ./outputs/flow_matching
+seed: 42
+model:
+  name: flow_matching
+  extra:
+    in_channels: 3
+    hidden_dim: 256
+    num_blocks: 4
+data:
+  dataset_name: diffusion
+  batch_size: 16
+  extra:
+    image_size: 64
+    conditioning: none
+training:
+  max_steps: 5000
+  learning_rate: 1.0e-4
+  log_interval: 10
+  checkpoint_interval: 1000

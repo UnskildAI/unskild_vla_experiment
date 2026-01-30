@@ -1,0 +1,73 @@
+"""Vision → Action policy trainer: explicit loop, gradient accumulation, mixed precision."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import torch
+from torch.utils.data import DataLoader
+from pydantic import BaseModel, Field
+
+from src.training.trainers.base import BaseTrainer, BaseTrainerConfig
+from src.training.losses.action import ActionLoss, ActionLossConfig
+from src.training.optimizers import build_optimizer, OptimizerConfig
+from src.core.typing import BatchDict
+
+
+class ActionTrainerConfig(BaseTrainerConfig):
+    """Config for action trainer."""
+
+    learning_rate: float = Field(1e-4, gt=0)
+    weight_decay: float = Field(0.0, ge=0)
+    max_grad_norm: float | None = Field(None)
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+class ActionTrainer(BaseTrainer):
+    """Vision → Action policy learning: explicit loop, gradient accumulation, mixed precision."""
+
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        config: ActionTrainerConfig,
+        loss_config: ActionLossConfig | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(config)
+        self._model = model
+        self._loss_fn = ActionLoss(loss_config or ActionLossConfig())
+        opt_config = OptimizerConfig(name="adamw", lr=config.learning_rate, weight_decay=config.weight_decay)
+        self._optimizer = build_optimizer(model.parameters(), opt_config)
+
+    @property
+    def model(self) -> torch.nn.Module:
+        return self._model
+
+    @model.setter
+    def model(self, value: torch.nn.Module) -> None:
+        self._model = value
+
+    @property
+    def optimizer(self) -> torch.optim.Optimizer:
+        return self._optimizer
+
+    @optimizer.setter
+    def optimizer(self, value: torch.optim.Optimizer) -> None:
+        self._optimizer = value
+
+    def train_step(self, batch: BatchDict) -> dict[str, Any]:
+        pixel_values = batch.get("pixel_values")
+        action_target = batch.get("action")
+        if action_target is None:
+            raise KeyError("Action batch must contain 'action'")
+        out = self._model(pixel_values=pixel_values)
+        pred = out if isinstance(out, torch.Tensor) else out.get("action", out.get("logits"))
+        if pred is None:
+            raise KeyError("Model must return 'action' or 'logits'")
+        loss = self._loss_fn(pred=pred, target=action_target, mask=batch.get("action_mask"))
+        return {"loss": loss, "loss_value": loss.detach().item()}
+
+    def eval_step(self, batch: BatchDict) -> dict[str, float]:
+        with torch.no_grad():
+            out = self.train_step(batch)
+        return {"loss": out["loss_value"]}

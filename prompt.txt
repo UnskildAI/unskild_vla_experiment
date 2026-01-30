@@ -1,0 +1,211 @@
+GOAL
+
+Design and implement a Vision-Language-Action (VLA) Training & Finetuning Framework that supports:
+
+Open-source SOTA Vision-Language Models (e.g. PaliGemma, Llava, Idefics)
+
+Diffusion-based and flow-matching models for vision/action generation
+
+Modular, component-wise finetuning (VLM, vision encoder, language head, action head, diffusion model trained independently)
+
+Dataset-agnostic supervision ( action trajectories, synthetic labels)
+
+Reproducible experiments, checkpoints, and evaluation
+
+This is training and finetuning infrastructure
+
+PROJECT STRUCTURE
+TECH STACK
+
+Python 3.11+
+
+uv / pip for dependency management
+
+PyTorch as the core training backend
+
+HuggingFace transformers, diffusers, accelerate
+
+Hydra or Pydantic-based configuration (no hard-coded knobs)
+
+SRC LAYOUT
+src/
+├── core/
+│   ├── registry.py            # Model, dataset, loss, trainer registries
+│   ├── typing.py              # Shared Protocols and type aliases
+│   ├── exceptions.py
+│   └── logging.py
+│
+├── data/
+│   ├── datasets/
+│   │   ├── base.py            # BaseDataset (vision, text, action, multimodal)
+│   │   ├── vlm.py             # Image-text / OCR / caption datasets
+│   │   ├── action.py          # State-action / trajectory datasets
+│   │   └── diffusion.py       # Image/video datasets for flow matching
+│   │
+│   ├── transforms/
+│   │   ├── vision.py
+│   │   ├── text.py
+│   │   └── multimodal.py
+│   │
+│   └── dataloaders.py
+│
+├── models/
+│   ├── vlm/
+│   │   ├── base.py            # BaseVLM (encode_image, encode_text, forward)
+│   │   ├── paligemma.py
+│   │   ├── llava.py
+│   │   └── adapters.py        # LoRA, QLoRA, prefix tuning
+│   │
+│   ├── diffusion/
+│   │   ├── base.py            # BaseDiffusionModel
+│   │   ├── flow_matching.py
+│   │   └── schedulers.py
+│   │
+│   ├── vision/
+│   │   └── encoders.py
+│   │
+│   ├── language/
+│   │   └── decoders.py
+│   │
+│   └── action/
+│       ├── base.py            # ActionHead abstraction
+│       └── policies.py
+│
+├── training/
+│   ├── trainers/
+│   │   ├── base.py            # BaseTrainer (train, eval, save, load)
+│   │   ├── vlm.py             # VLM finetuning
+│   │   ├── diffusion.py       # Flow matching / diffusion training
+│   │   └── action.py          # Vision → Action training
+│   │
+│   ├── losses/
+│   │   ├── vlm.py
+│   │   ├── diffusion.py
+│   │   └── action.py
+│   │
+│   ├── optimizers.py
+│   ├── schedulers.py
+│   └── callbacks.py           # Logging, EMA, checkpointing
+│
+├── evaluation/
+│   ├── metrics/
+│   │   ├── vision.py
+│   │   ├── language.py
+│   │   └── action.py
+│   │
+│   └── benchmarks.py
+│
+├── pipelines/
+│   ├── base.py                # BasePipeline (compose stages)
+│   ├── vlm_training.py
+│   ├── diffusion_training.py
+│   ├── action_training.py
+│   └── hybrid.py              # VLM + diffusion + action (optional)
+│
+├── config/
+│   ├── model/
+│   ├── data/
+│   ├── training/
+│   └── evaluation/
+│
+└── cli/
+    ├── train.py
+    ├── eval.py
+    └── export.py
+
+feel free to tweak the structure above as per need of the complete project
+
+CORE DESIGN RULES (NON-NEGOTIABLE)
+1. SEPARABLE FINETUNING
+
+Every model component must be trainable independently
+
+No implicit coupling between:
+
+vision encoder
+
+language decoder
+
+action head
+
+diffusion model
+
+If it can’t be frozen or swapped, your design failed.
+
+2. BASE ABSTRACTIONS (MANDATORY)
+
+Each base class must:
+
+Use ABC + abstractmethod
+
+Be torch-native
+
+Accept Pydantic config objects
+
+Support checkpoint save/load
+
+Required base classes:
+
+BaseDataset
+
+BaseVLM
+
+BaseDiffusionModel
+
+BaseActionHead
+
+BaseTrainer
+
+BasePipeline
+
+3. CONFIGURATION SYSTEM
+
+YAML-based
+
+Environment variable expansion
+
+Zero logic in config files
+
+Full experiment reproducibility (seed, model hash, dataset version)
+
+4. TRAINING FIRST, INFERENCE SECOND
+
+Explicit training loops
+
+Gradient accumulation
+
+Mixed precision
+
+Distributed support via accelerate
+
+Logging hooks (W&B / TensorBoard optional)
+
+No “magic” training hidden in helpers.
+
+5. DIFFUSION / FLOW MATCHING SUPPORT
+
+Explicit noise schedules
+
+Continuous time formulation
+
+Pluggable loss functions
+
+Dataset-level conditioning (image, text, action)
+
+DELIVERABLES
+
+Fully scaffolded directory with __init__.py
+
+All abstract base classes implemented
+
+Example configs for:
+
+VLM finetuning
+
+Flow-matching diffusion training
+
+Vision → Action policy learning
+
+CLI entrypoints for training and evaluation
+
+Zero hard-coded model assumptions

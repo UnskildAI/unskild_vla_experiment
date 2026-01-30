@@ -1,0 +1,10 @@
+# Example: Action / trajectory dataset config (fragment)
+dataset_name: action
+batch_size: 32
+num_workers: 0
+shuffle: true
+drop_last: true
+extra:
+  state_dim: 0
+  action_dim: 7
+  sequence_length: 1

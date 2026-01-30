@@ -1,0 +1,33 @@
+# Finetune VLM on a LeRobot-style dataset (image + task text per frame).
+# Set data.extra.repo_id to your HF repo or use data.extra.root for local v3 layout.
+experiment_name: lerobot_vlm_finetune
+output_dir: ./outputs/lerobot_vlm_finetune
+seed: 42
+model:
+  name: paligemma
+  extra:
+    vision_frozen: false
+    language_frozen: false
+data:
+  dataset_name: lerobot_vlm
+  batch_size: 16
+  num_workers: 0
+  shuffle: true
+  drop_last: true
+  extra:
+    repo_id: lerobot/aloha_mobile_cabinet  # or your-username/your-dataset
+    # root: /path/to/local/lerobot/v3  # optional: local path (meta/, data/, videos/)
+    max_length: 512
+    image_size: 224
+    single_task: null  # or e.g. "Pick the cube" to override task text
+training:
+  max_steps: 5000
+  gradient_accumulation_steps: 1
+  mixed_precision: fp16
+  seed: 42
+  log_interval: 20
+  eval_interval: 500
+  checkpoint_interval: 1000
+  learning_rate: 1.0e-5
+  weight_decay: 0.0
+  max_grad_norm: 1.0

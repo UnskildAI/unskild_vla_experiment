@@ -1,0 +1,11 @@
+# Example: Training config (fragment)
+max_steps: 10000
+gradient_accumulation_steps: 1
+mixed_precision: fp16
+seed: 42
+log_interval: 10
+eval_interval: 500
+checkpoint_interval: 1000
+learning_rate: 1.0e-5
+weight_decay: 0.0
+max_grad_norm: 1.0

@@ -1,0 +1,10 @@
+# Example: Diffusion / flow-matching dataset config (fragment)
+dataset_name: diffusion
+batch_size: 16
+num_workers: 0
+shuffle: true
+drop_last: true
+extra:
+  image_size: 64
+  num_channels: 3
+  conditioning: none

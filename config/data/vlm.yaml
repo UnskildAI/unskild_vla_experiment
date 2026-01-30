@@ -1,0 +1,9 @@
+# Example: VLM dataset config (fragment)
+dataset_name: vlm
+batch_size: 8
+num_workers: 0
+shuffle: true
+drop_last: true
+extra:
+  max_length: 512
+  image_size: 224

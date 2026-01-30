@@ -1,0 +1,8 @@
+# Example: VLM finetuning model config (fragment)
+# Use with experiment YAML via model.name and model.extra
+name: paligemma
+frozen: false
+extra:
+  model_name_or_path: google/paligemma-3b-pt-224
+  vision_frozen: false
+  language_frozen: false
