@@ -20,6 +20,7 @@ class PaliGemmaConfig(BaseVLMConfig):
     model_name_or_path: str = Field("google/paligemma-3b-pt-224", description="HF model id or path")
     vision_frozen: bool = False
     language_frozen: bool = False
+    gradient_checkpointing: bool = False
     extra: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -41,6 +42,9 @@ class PaliGemmaVLM(BaseVLM):
             low_cpu_mem_usage=True
         )
         self.processor = PaliGemmaProcessor.from_pretrained(self.model_name_or_path)
+
+        if config.gradient_checkpointing:
+            self.hf_model.gradient_checkpointing_enable()
 
         if config.vision_frozen:
             self.freeze_vision()

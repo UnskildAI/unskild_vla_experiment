@@ -64,6 +64,11 @@ class BaseTrainer(ABC):
         # Move model to device
         self.model.to(self.device)
         
+        # Multi-GPU support via DataParallel
+        if torch.cuda.device_count() > 1:
+            self.logger.info(f"Using {torch.cuda.device_count()} GPUs with DataParallel")
+            self.model = torch.nn.DataParallel(self.model)
+        
         accum_steps = self.config.gradient_accumulation_steps
         max_grad_norm = getattr(self.config, "max_grad_norm", None)
         self.model.train()

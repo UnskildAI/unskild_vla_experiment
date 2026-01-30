@@ -8,6 +8,7 @@ model:
   extra:
     vision_frozen: false
     language_frozen: false
+    gradient_checkpointing: true
 data:
   dataset_name: lerobot_vlm
   batch_size: 2
