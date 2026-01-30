@@ -31,5 +31,5 @@ def build_dataloader(
         num_workers=num_workers,
         drop_last=drop_last,
         pin_memory=kwargs.get("pin_memory", False),
-        **{k: v for k, v in kwargs.items() if k not in ("pin_memory",)},
+        **{k: v for k, v in kwargs.items() if k not in ("pin_memory", "tokenizer")},
     )
